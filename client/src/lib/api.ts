@@ -111,7 +111,7 @@ export function useGetDashboardStats() {
 export function useGetTransactionGraph() {
   return useQuery<TransactionGraph>({
     queryKey: ["transaction-graph"],
-    queryFn: () => apiFetch("/transaction-graph"),
+    queryFn: () => apiFetch("/graph"),
     staleTime: 60_000,
   });
 }
@@ -147,7 +147,7 @@ export function useExportReport(options?: { query?: { enabled?: boolean } }) {
   return useQuery<null>({
     queryKey: ["export-report"],
     queryFn: async () => {
-      const res = await fetch(`${BASE}/api/export-report`);
+      const res = await fetch(`${BASE}/api/export/report`);
       if (!res.ok) throw new Error("Export failed");
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -169,7 +169,7 @@ export function useUploadCompanies() {
     mutationFn: async ({ data }) => {
       const form = new FormData();
       form.append("file", data.file);
-      return apiFetch("/upload-companies", { method: "POST", body: form });
+      return apiFetch("/upload/companies", { method: "POST", body: form });
     },
     onSuccess: () => { qc.invalidateQueries(); },
   });
@@ -181,7 +181,7 @@ export function useUploadInvoices() {
     mutationFn: async ({ data }) => {
       const form = new FormData();
       form.append("file", data.file);
-      return apiFetch("/upload-invoices", { method: "POST", body: form });
+      return apiFetch("/upload/invoices", { method: "POST", body: form });
     },
     onSuccess: () => { qc.invalidateQueries(); },
   });
@@ -190,7 +190,7 @@ export function useUploadInvoices() {
 export function useResetToSyntheticData() {
   const qc = useQueryClient();
   return useMutation<{ success: boolean }, Error, void>({
-    mutationFn: () => apiFetch("/reset-synthetic", { method: "POST" }),
+    mutationFn: () => apiFetch("/upload/reset", { method: "POST" }),
     onSuccess: () => { qc.invalidateQueries(); },
   });
 }
