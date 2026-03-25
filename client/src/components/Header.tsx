@@ -11,18 +11,8 @@ export function Header() {
   const { refetch: fetchReport, isFetching: isExporting } = useExportReport({ query: { enabled: false } });
 
   const handleExport = async () => {
-    const res = await fetchReport();
-    if (res.data) {
-      const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `gst-fraud-audit-${new Date().toISOString().split('T')[0]}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }
+    // queryFn handles the Blob download internally; just trigger it
+    await fetchReport();
   };
 
   return (
