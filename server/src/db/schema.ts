@@ -1,6 +1,4 @@
 import { pgTable, text, real, integer, timestamp, serial } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod/v4";
 
 export const companiesTable = pgTable("companies", {
   gstin: text("gstin").primaryKey(),
@@ -11,8 +9,14 @@ export const companiesTable = pgTable("companies", {
   riskLevel: text("risk_level").notNull().default("LOW"),
 });
 
-export const insertCompanySchema = createInsertSchema(companiesTable);
-export type InsertCompany = z.infer<typeof insertCompanySchema>;
+export interface InsertCompany {
+  gstin: string;
+  companyName: string;
+  state: string;
+  registrationDate: string;
+  fraudScore?: number;
+  riskLevel?: string;
+}
 export type Company = typeof companiesTable.$inferSelect;
 
 export const invoicesTable = pgTable("invoices", {
@@ -28,8 +32,18 @@ export const invoicesTable = pgTable("invoices", {
   invoiceAmount: real("invoice_amount").notNull(),
 });
 
-export const insertInvoiceSchema = createInsertSchema(invoicesTable);
-export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
+export interface InsertInvoice {
+  invoiceId: string;
+  sellerGstin: string;
+  buyerGstin: string;
+  invoiceDate: string;
+  taxableValue: number;
+  cgst: number;
+  sgst: number;
+  igst: number;
+  totalTax: number;
+  invoiceAmount: number;
+}
 export type Invoice = typeof invoicesTable.$inferSelect;
 
 export const fraudRingsTable = pgTable("fraud_rings", {
@@ -40,8 +54,12 @@ export const fraudRingsTable = pgTable("fraud_rings", {
   detectedAt: text("detected_at").notNull(),
 });
 
-export const insertFraudRingSchema = createInsertSchema(fraudRingsTable).omit({ ringId: true });
-export type InsertFraudRing = z.infer<typeof insertFraudRingSchema>;
+export interface InsertFraudRing {
+  cyclePath: string;
+  cycleLength: number;
+  totalCyclingValue: number;
+  detectedAt: string;
+}
 export type FraudRing = typeof fraudRingsTable.$inferSelect;
 
 export const entityScoresTable = pgTable("entity_scores", {
@@ -56,8 +74,17 @@ export const entityScoresTable = pgTable("entity_scores", {
   compositeScore: real("composite_score").notNull().default(0),
 });
 
-export const insertEntityScoreSchema = createInsertSchema(entityScoresTable);
-export type InsertEntityScore = z.infer<typeof insertEntityScoreSchema>;
+export interface InsertEntityScore {
+  gstin: string;
+  taxMismatchRatio?: number;
+  volumeSpikeScore?: number;
+  duplicateInvoiceCount?: number;
+  cycleParticipation?: number;
+  shellCompanyScore?: number;
+  pagerankAnomaly?: number;
+  isolationForestLabel?: number;
+  compositeScore?: number;
+}
 export type EntityScore = typeof entityScoresTable.$inferSelect;
 
 export const dataSourceTable = pgTable("data_source", {

@@ -1,5 +1,11 @@
+import { Router, type IRouter, type Request, type Response } from "express";
+import multer from "multer";
+import { eq, desc } from "drizzle-orm";
+import { db, companiesTable, invoicesTable, fraudRingsTable, entityScoresTable, dataSourceTable } from "../db";
 import { analyzeGSTData, getPrimaryRedFlag, buildGraphData, getMonthlyFilings, parseCompaniesCSV, parseInvoicesCSV } from "../lib/fraudEngine";
 import { generateSyntheticData } from "../lib/syntheticData";
+
+const MAX_RING_SIZE = 20;
 
 const router: IRouter = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -29,7 +35,7 @@ async function runAnalysisAndUpdate(): Promise<void> {
   for (const update of companyUpdates) {
     await db
       .update(companiesTable)
-      .set({ fraudScore: update.fraudScore, riskLevel: update.riskLevel })
+      .set({ fraudScore: update.fraudScore, riskLevel: update.riskLevel } as any)
       .where(eq(companiesTable.gstin, update.gstin));
   }
 }
@@ -65,7 +71,7 @@ router.get("/dashboard-stats", async (req, res): Promise<void> => {
     totalInvoices: invoices.length,
     averageFraudScore: Math.round(avgScore * 10) / 10,
     dataSource: dsRow[0]?.source ?? "synthetic",
-  }));
+  });
 });
 
 // GET /companies
@@ -174,7 +180,7 @@ router.get("/companies/:gstin", async (req, res): Promise<void> => {
     monthlyFilings: monthly,
     connectedEntities: [...connectedSet].slice(0, 20),
     fraudRingIds,
-  }));
+  });
 });
 
 // GET /graph
@@ -185,12 +191,10 @@ router.get("/graph", async (req, res): Promise<void> => {
   const rings = await db.select().from(fraudRingsTable);
 
   const graphData = buildGraphData(companies, invoices, scores, rings);
-  res.json(GetTransactionGraphResponse.parse(graphData));
+  res.json(graphData);
 });
 
 // GET /fraud-rings
-// MAX_RING_SIZE: filter out oversized SCCs that are statistical noise, not real rings
-const MAX_RING_SIZE = 20;
 router.get("/fraud-rings", async (req, res): Promise<void> => {
   const rings = await db.select().from(fraudRingsTable);
   const companies = await db.select().from(companiesTable);
@@ -289,7 +293,7 @@ router.post("/upload/companies", upload.single("file"), async (req, res): Promis
     message: `Uploaded ${validCompanies.length} companies`,
     recordsProcessed: validCompanies.length,
     errors,
-  }));
+  });
 });
 
 // POST /upload/invoices
@@ -331,7 +335,7 @@ router.post("/upload/invoices", upload.single("file"), async (req, res): Promise
     message: `Processed ${validInvoices.length} invoices`,
     recordsProcessed: validInvoices.length,
     errors,
-  }));
+  });
 });
 
 // POST /upload/reset
@@ -353,7 +357,7 @@ router.post("/upload/reset", async (req, res): Promise<void> => {
     message: "Reset to synthetic demo data",
     recordsProcessed: companies.length,
     errors: [],
-  }));
+  });
 });
 
 // GET /export/companies
@@ -390,7 +394,7 @@ router.get("/export/companies", async (req, res): Promise<void> => {
     companies: result,
     exportedAt: new Date().toISOString(),
     totalRecords: result.length,
-  }));
+  });
 });
 
 // GET /export/report
@@ -494,7 +498,7 @@ router.get("/export/report", async (req, res): Promise<void> => {
     fraudRings: fraudRingData,
     anomalies,
     summary: `Analysis of ${companies.length} GST entities and ${invoices.length} invoices detected ${rings.length} fraud rings with ₹${(totalRingValue / 1e7).toFixed(2)} Cr in circular transactions. ${critical} entities are CRITICAL risk, ${highRisk} are HIGH risk.`,
-  }));
+  });
 });
 
 export default router;

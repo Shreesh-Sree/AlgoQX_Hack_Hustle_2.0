@@ -23,7 +23,7 @@ export async function seedIfEmpty(): Promise<void> {
   }
   console.log(`Inserted ${invoices.length} invoices`);
 
-  const { companyUpdates, entityScores, fraudRings } = analyzeGSTData(companies, invoices);
+  const { companyUpdates, entityScores, fraudRings } = analyzeGSTData(companies as any, invoices);
 
   if (fraudRings.length > 0) {
     await db.insert(fraudRingsTable).values(fraudRings);
@@ -41,7 +41,7 @@ export async function seedIfEmpty(): Promise<void> {
   for (const update of companyUpdates) {
     await db
       .update(companiesTable)
-      .set({ fraudScore: update.fraudScore, riskLevel: update.riskLevel })
+      .set({ fraudScore: update.fraudScore, riskLevel: update.riskLevel } as any)
       .where(eq(companiesTable.gstin, update.gstin));
   }
 
