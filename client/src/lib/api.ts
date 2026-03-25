@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 const BASE = import.meta.env.VITE_API_URL ?? "";
@@ -35,17 +36,20 @@ export interface CompanySummary {
   isInFraudRing: boolean;
 }
 
+export interface FeatureScores {
+  taxMismatchRatio: number;
+  volumeSpikeScore: number;
+  duplicateInvoiceCount: number;
+  cycleParticipation: number;
+  shellCompanyScore: number;
+  pagerankAnomaly: number;
+  isolationForestLabel: number;
+  compositeScore: number;
+}
+
 export interface CompanyDetail extends CompanySummary {
-  entityScores: {
-    taxMismatchRatio: number;
-    volumeSpikeScore: number;
-    duplicateInvoiceCount: number;
-    cycleParticipation: number;
-    shellCompanyScore: number;
-    pagerankAnomaly: number;
-    isolationForestLabel: number;
-    compositeScore: number;
-  } | null;
+  registrationDate: string;
+  featureScores: FeatureScores;
   monthlyFilings: { month: string; value: number }[];
   recentInvoices: {
     invoiceId: string;
@@ -55,6 +59,8 @@ export interface CompanyDetail extends CompanySummary {
     invoiceDate: string;
     invoiceAmount: number;
   }[];
+  connectedEntities: string[];
+  fraudRingIds: number[];
 }
 
 export interface GraphNode {
@@ -118,11 +124,14 @@ export function useGetCompanies(params?: { sortBy?: string; riskLevel?: string; 
   });
 }
 
-export function useGetCompanyDetail(gstin: string | null) {
+export function useGetCompanyDetail(
+  gstin: string,
+  options?: { query?: { enabled?: boolean } }
+) {
   return useQuery<CompanyDetail>({
     queryKey: ["company", gstin],
     queryFn: () => apiFetch(`/companies/${gstin}`),
-    enabled: !!gstin,
+    enabled: options?.query?.enabled !== false && !!gstin,
   });
 }
 
@@ -133,9 +142,11 @@ export function useGetFraudRings() {
   });
 }
 
-export function useExportReport() {
-  return useMutation({
-    mutationFn: async () => {
+/** Lazy query — call refetch() to trigger a JSON download. */
+export function useExportReport(options?: { query?: { enabled?: boolean } }) {
+  return useQuery<null>({
+    queryKey: ["export-report"],
+    queryFn: async () => {
       const res = await fetch(`${BASE}/api/export-report`);
       if (!res.ok) throw new Error("Export failed");
       const blob = await res.blob();
@@ -145,7 +156,10 @@ export function useExportReport() {
       a.download = `gst-fraud-report-${Date.now()}.json`;
       a.click();
       URL.revokeObjectURL(url);
+      return null;
     },
+    enabled: options?.query?.enabled ?? false,
+    retry: false,
   });
 }
 
