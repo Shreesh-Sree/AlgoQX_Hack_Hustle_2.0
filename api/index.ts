@@ -1,25 +1,19 @@
 /**
  * Vercel Serverless Function entry point.
- * Wraps the Express app so Vercel can invoke it as a serverless function.
+ * Imports from the pre-compiled server/dist (built in buildCommand).
  */
-import type { Request, Response, NextFunction } from "express";
-import app from "../server/src/app";
-import { seedIfEmpty } from "../server/src/lib/seed";
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { default: app } = require("../server/dist/app");
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { seedIfEmpty } = require("../server/dist/lib/seed");
 
 // Seed once per cold start — failures are non-fatal
 let seeded = false;
 if (!seeded) {
   seeded = true;
-  seedIfEmpty().catch((err) =>
-    console.error("Seed error (non-fatal):", err?.message ?? err)
+  (seedIfEmpty as () => Promise<void>)().catch((err: unknown) =>
+    console.error("Seed error (non-fatal):", (err as Error)?.message ?? err)
   );
 }
 
-// Global error handler so unhandled route errors return JSON, not HTML
-app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
-  console.error("Unhandled error:", err);
-  const msg = err instanceof Error ? err.message : "Internal server error";
-  res.status(500).json({ error: msg });
-});
-
-export default app;
+module.exports = app;
